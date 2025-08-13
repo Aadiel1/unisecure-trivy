@@ -1,0 +1,60 @@
+name: Build, Scan, and Push Docker Image
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-scan:
+    runs-on: ubuntu-latest
+    steps:
+      # Checkout repo
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Log in to GitHub Container Registry
+      - name: Log in to GHCR
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Build Docker image
+      - name: Build Docker image
+        run: |
+          IMAGE_NAME=ghcr.io/${{ github.repository }}/simple-node-app:latest
+          docker build -t $IMAGE_NAME .
+
+      # Scan image with Trivy
+      - name: Install Trivy
+        uses: aquasecurity/trivy-action@v1
+        with:
+          version: 'v0.44.2'
+
+      - name: Scan Docker image
+        id: trivy
+        run: |
+          IMAGE_NAME=ghcr.io/${{ github.repository }}/simple-node-app:latest
+          trivy image --severity HIGH,CRITICAL --no-progress --format json -o trivy-report.json $IMAGE_NAME
+          COUNT=$(jq '.Results[].Vulnerabilities | length' trivy-report.json | awk '{s+=$1} END {print s}')
+          echo "Vulnerabilities found: $COUNT"
+          echo "count=$COUNT" >> $GITHUB_OUTPUT
+
+      # Decide whether to deploy
+      - name: Check vulnerabilities
+        run: |
+          if [ "${{ steps.trivy.outputs.count }}" -eq "0" ]; then
+            echo "you are good to deploy"
+          else
+            echo "High or Critical vulnerabilities found! Check trivy-report.json"
+            exit 1
+          fi
+
+      # Push image to GHCR
+      - name: Push Docker image
+        if: ${{ steps.trivy.outputs.count == '0' }}
+        run: |
+          IMAGE_NAME=ghcr.io/${{ github.repository }}/simple-node-app:latest
+          docker push $IMAGE_NAME
