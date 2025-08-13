@@ -8,12 +8,13 @@ on:
 jobs:
   build-and-scan:
     runs-on: ubuntu-latest
+
     steps:
-      # Checkout code
+      # 1. Checkout repo
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Log in to GitHub Container Registry
+      # 2. Log in to GitHub Container Registry
       - name: Log in to GHCR
         uses: docker/login-action@v2
         with:
@@ -21,30 +22,30 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Build Docker image
+      # 3. Build Docker image
       - name: Build Docker image
         run: |
-          IMAGE_NAME=ghcr.io/${{ github.repository }}/simple-node-app:latest
+          IMAGE_NAME=ghcr.io/aadiel1/unisecure-trivy/simple-node-app:latest
           docker build -t $IMAGE_NAME .
 
-      # Install Trivy
+      # 4. Install Trivy
       - name: Install Trivy
         uses: aquasecurity/setup-trivy@v0.2.3
         with:
           version: v0.65.0
           cache: true
 
-      # Scan Docker image for vulnerabilities
+      # 5. Scan Docker image for HIGH/CRITICAL vulnerabilities
       - name: Scan Docker image
         id: trivy
         run: |
-          IMAGE_NAME=ghcr.io/${{ github.repository }}/simple-node-app:latest
+          IMAGE_NAME=ghcr.io/aadiel1/unisecure-trivy/simple-node-app:latest
           trivy image --severity HIGH,CRITICAL --no-progress --format json -o trivy-report.json $IMAGE_NAME
           COUNT=$(jq '.Results[].Vulnerabilities | length' trivy-report.json | awk '{s+=$1} END {print s}')
           echo "Vulnerabilities found: $COUNT"
           echo "count=$COUNT" >> $GITHUB_OUTPUT
 
-      # Check vulnerabilities and decide whether to deploy
+      # 6. Decide whether to deploy
       - name: Check vulnerabilities
         run: |
           if [ "${{ steps.trivy.outputs.count }}" -eq "0" ]; then
@@ -54,9 +55,9 @@ jobs:
             exit 1
           fi
 
-      # Push Docker image to GHCR
+      # 7. Push Docker image to GHCR (only if no high/critical vulnerabilities)
       - name: Push Docker image
         if: ${{ steps.trivy.outputs.count == '0' }}
         run: |
-          IMAGE_NAME=ghcr.io/${{ github.repository }}/simple-node-app:latest
+          IMAGE_NAME=ghcr.io/aadiel1/unisecure-trivy/simple-node-app:latest
           docker push $IMAGE_NAME
