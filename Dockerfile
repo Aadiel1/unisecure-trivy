@@ -1,22 +1,19 @@
-# Use official Node.js 20 Alpine image
+# Use lightweight Node.js 20 Alpine image
 FROM node:20-alpine
 
 # Set working directory
 WORKDIR /usr/src/app
 
-# Set environment to production
-ENV NODE_ENV=production
+# Copy package files first (for caching)
+COPY package.json package-lock.json ./
 
-# Copy package files first for caching
-COPY package*.json ./
-
-# Install production dependencies
+# Install only production dependencies
 RUN npm ci --only=production
 
-# Copy the rest of the app
+# Copy the rest of the application
 COPY . .
 
-# Expose port
+# Expose the app port
 EXPOSE 3000
 
 # Start the application
