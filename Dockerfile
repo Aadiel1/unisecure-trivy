@@ -1,5 +1,5 @@
 # Use a recent, secure Alpine-based Node 20 image
-FROM node:20.19.4-alpine3.25
+FROM node:20-alpine
 
 # Set working directory
 WORKDIR /usr/src/app
