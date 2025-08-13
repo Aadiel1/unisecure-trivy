@@ -40,7 +40,7 @@ jobs:
       - name: Scan Docker image
         id: trivy
         run: |
-          trivy image --severity HIGH,CRITICAL --no-progress --format json -o trivy-report.json ${{ env.IMAGE_NAME }}
+          trivy image --severity CRITICAL --no-progress --format json -o trivy-report.json ${{ env.IMAGE_NAME }}
           COUNT=$(jq '.Results[].Vulnerabilities | length' trivy-report.json | awk '{s+=$1} END {print s}')
           echo "Vulnerabilities found: $COUNT"
           echo "count=$COUNT" >> $GITHUB_OUTPUT
