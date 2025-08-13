@@ -4,15 +4,18 @@ FROM node:20-alpine
 # Set working directory
 WORKDIR /usr/src/app
 
-# Create a non-root user and switch to it
-RUN addgroup -S nodegroup && adduser -S nodeuser -G nodegroup
-USER nodeuser
+# Copy package.json first (lock file optional)
+COPY package.json ./
 
-# Copy package.json only (lock file optional)
-COPY --chown=nodeuser:nodegroup package.json ./
-
-# Install production dependencies
+# Install production dependencies as root
 RUN npm install --production
+
+# Create a non-root user and switch ownership
+RUN addgroup -S nodegroup && adduser -S nodeuser -G nodegroup \
+    && chown -R nodeuser:nodegroup /usr/src/app
+
+# Switch to non-root user for running the app
+USER nodeuser
 
 # Copy the rest of the app
 COPY --chown=nodeuser:nodegroup . .
