@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout repo
+      # 1. Checkout code
       - name: Checkout code
         uses: actions/checkout@v3
 
@@ -48,11 +48,15 @@ jobs:
       # 6. Report vulnerabilities
       - name: Report vulnerabilities
         run: |
-          if [ "${{ steps.trivy.outputs.count }}" -eq "0" ]; then
+          COUNT="${{ steps.trivy.outputs.count }}"
+          echo "Found high/critical vulnerabilities: $COUNT"
+
+          if [ "$COUNT" -eq "0" ]; then
             echo "No high or critical vulnerabilities found. You are good to deploy."
           else
             echo "High or Critical vulnerabilities found! Check trivy-report.json"
             cat trivy-report.json
+          fi
 
       # 7. Push Docker image only if no high/critical vulnerabilities
       - name: Push Docker image
